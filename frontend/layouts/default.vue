@@ -1,5 +1,5 @@
 <template>
-  <div id="app">
+  <div id="app" class="owd-workspace">
     <!--
     Confirmation Modal is a singleton used by all components so we render
     it here to ensure it's always available. Possibly could move this further
@@ -22,10 +22,8 @@
           <SidebarGroupLabel class="text-base group-data-[collapsible=icon]:hidden">{{
             $t("global.welcome", { username: username })
           }}</SidebarGroupLabel>
-          <NuxtLink class="group-data-[collapsible=icon]:hidden" to="/home">
-            <div class="flex size-24 items-center justify-center rounded-full bg-background-accent p-4">
-              <AppLogo />
-            </div>
+          <NuxtLink class="max-w-full" to="/home">
+            <AppWorkspaceBrand />
           </NuxtLink>
 
           <CollectionSelector />
@@ -184,7 +182,7 @@
             <div class="flex h-1/2 items-center gap-2 sm:h-auto">
               <SidebarTrigger variant="default" />
               <NuxtLink to="/home">
-                <AppHeaderText class="h-6" />
+                <span class="text-sm font-semibold">One World Direct</span>
               </NuxtLink>
             </div>
             <div class="sm:grow" />
@@ -236,6 +234,7 @@
 
 <script lang="ts" setup>
   import { useI18n } from "vue-i18n";
+  import { provideWorkspaceSurface } from "~/composables/useWorkspaceSurface";
   import DOMPurify from "dompurify";
   import { useTagStore } from "~/stores/tags";
   import { useLocationStore } from "~~/stores/locations";
@@ -293,13 +292,14 @@
   import ItemBarcodeModal from "~/components/Item/BarcodeModal.vue";
   import AppQuickMenuModal from "~/components/App/QuickMenuModal.vue";
   import AppScannerModal from "~/components/App/ScannerModal.vue";
-  import AppLogo from "~/components/App/Logo.vue";
+  import AppWorkspaceBrand from "~/components/App/WorkspaceBrand.vue";
   import AppHeaderDecor from "~/components/App/HeaderDecor.vue";
-  import AppHeaderText from "~/components/App/HeaderText.vue";
   import CollectionSelector from "~/components/Collection/Selector.vue";
   import CollectionCreateModal from "~/components/Collection/CreateModal.vue";
   import CollectionJoinModal from "~/components/Collection/JoinModal.vue";
   import CollectionInviteCreateModal from "~/components/Collection/InviteCreateModal.vue";
+
+  provideWorkspaceSurface();
 
   const { t, locale } = useI18n();
   const username = computed(() => authCtx.user?.name || "User");

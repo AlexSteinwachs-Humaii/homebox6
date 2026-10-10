@@ -1,4 +1,7 @@
 {
+    "workspace": {
+        "brand_descriptor": "Inventory workspace"
+    },
     "collection": {
         "copy_invite": "Copy Invite Link",
         "create_invite": "Create Invite",
