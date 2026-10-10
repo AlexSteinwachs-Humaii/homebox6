@@ -34,7 +34,7 @@
         </ComboboxAnchor>
 
         <ComboboxPortal>
-          <ComboboxContent :side-offset="4" position="popper" class="z-50">
+          <ComboboxContent :side-offset="4" position="popper" class="z-50" :class="workspaceSurface">
             <CommandList
               position="popper"
               class="mt-2 w-[--reka-popper-anchor-width] rounded-md border bg-popover text-popover-foreground shadow-md outline-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2"
@@ -80,6 +80,7 @@
 </template>
 <script setup lang="ts">
   import { useI18n } from "vue-i18n";
+  import { useWorkspaceSurface } from "~/composables/useWorkspaceSurface";
   import { ComboboxAnchor, ComboboxContent, ComboboxInput, ComboboxPortal, ComboboxRoot } from "reka-ui";
   import { computed, ref } from "vue";
   import fuzzysort from "fuzzysort";
@@ -95,6 +96,7 @@
   import type { TagOut } from "~/lib/api/types/data-contracts";
   import { Label } from "@/components/ui/label";
 
+  const workspaceSurface = useWorkspaceSurface();
   const { t } = useI18n();
 
   const id = useId();

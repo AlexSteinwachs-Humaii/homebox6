@@ -1,4 +1,5 @@
 <script setup lang="ts">
+  import { useWorkspaceSurface } from "@/composables/useWorkspaceSurface";
 import { cn } from '@/lib/utils'
 import { X } from 'lucide-vue-next'
 import {
@@ -12,7 +13,9 @@ import {
 } from 'reka-ui'
 import { computed, type HTMLAttributes } from 'vue'
 
-const props = defineProps<DialogContentProps & { class?: HTMLAttributes['class'] }>()
+const workspaceSurface = useWorkspaceSurface();
+
+  const props = defineProps<DialogContentProps & { class?: HTMLAttributes['class'] }>()
 const emits = defineEmits<DialogContentEmits>()
 
 const delegatedProps = computed(() => {
@@ -33,7 +36,7 @@ const forwarded = useForwardPropsEmits(delegatedProps, emits)
         :class="
           cn(
             'relative z-50 grid w-full max-w-lg my-8 gap-4 border border-border bg-background p-6 shadow-lg duration-200 sm:rounded-lg md:w-full',
-            props.class,
+            workspaceSurface, props.class,
           )
         "
         v-bind="forwarded"

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+  import { useWorkspaceSurface } from "@/composables/useWorkspaceSurface";
   import { X } from "lucide-vue-next";
   import {
     DialogClose,
@@ -22,6 +23,8 @@
     inheritAttrs: false,
   });
 
+  const workspaceSurface = useWorkspaceSurface();
+
   const props = defineProps<SheetContentProps>();
 
   const emits = defineEmits<DialogContentEmits>();
@@ -40,7 +43,7 @@
     <DialogOverlay
       class="fixed inset-0 z-40 bg-black/80 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0"
     />
-    <DialogContent :class="cn(sheetVariants({ side }), props.class)" v-bind="{ ...forwarded, ...$attrs }">
+    <DialogContent :class="cn(sheetVariants({ side }), workspaceSurface, props.class)" v-bind="{ ...forwarded, ...$attrs }">
       <slot />
 
       <DialogClose
