@@ -505,6 +505,17 @@
         "entity_type": "Entity Type"
     },
     "home": {
+        "inventory_eyebrow": "One World Direct / Inventory",
+        "introduction_title": "A clear view of your inventory.",
+        "introduction_description": "Your items, storage locations and asset information in one workspace.",
+        "collection_context": "{name} collection",
+        "value_description": "Recorded inventory value",
+        "items_description": "Inventory records",
+        "locations_description": "Organized storage areas",
+        "tags_description": "Inventory categories",
+        "statistics_unavailable": "Unavailable",
+        "statistics_error": "Collection statistics could not be loaded. Please try again.",
+        "statistics_retry": "Retry",
         "quick_statistics": "Quick Statistics",
         "recently_added": "Recently Added",
         "storage_locations": "Storage Locations",

@@ -7,7 +7,8 @@
   import BaseContainer from "@/components/Base/Container.vue";
   import BaseCard from "@/components/Base/Card.vue";
   import Subtitle from "~/components/global/Subtitle.vue";
-  import StatCard from "~/components/global/StatCard/StatCard.vue";
+  import StatisticCard from "~/components/Home/StatisticCard.vue";
+  import { Button } from "~/components/ui/button";
   import ItemCard from "~/components/Item/Card.vue";
   import LocationCard from "~/components/Location/Card.vue";
   import TagChip from "~/components/Tag/Chip.vue";
@@ -19,7 +20,7 @@
     middleware: ["auth"],
   });
   useHead({
-    title: "HomeBox | " + t("menu.home"),
+    title: "One World Direct | " + t("menu.home"),
   });
 
   const api = useUserApi();
@@ -32,16 +33,53 @@
   const tags = computed(() => tagsStore.tags);
 
   const itemTable = itemsTable(api);
-  const stats = statCardData(api);
+  const { selectedCollection } = useCollections();
+  const {
+    cards: stats,
+    status: statisticsStatus,
+    error: statisticsError,
+    refresh: refreshStatistics,
+  } = statCardData(api);
+  const statisticsLoading = computed(() => statisticsStatus.value === "pending" || statisticsStatus.value === "idle");
+  const statisticsFailed = computed(() => !!statisticsError.value);
 </script>
 
 <template>
   <div>
-    <BaseContainer class="flex flex-col gap-4">
-      <section>
-        <Subtitle> {{ $t("home.quick_statistics") }} </Subtitle>
-        <div class="grid grid-cols-2 gap-2 md:grid-cols-4 md:gap-6">
-          <StatCard v-for="(stat, i) in stats" :key="i" :title="stat.label" :value="stat.value" :type="stat.type" />
+    <BaseContainer class="flex flex-col gap-6 lg:my-6 lg:px-9">
+      <section aria-labelledby="home-introduction">
+        <p class="mb-1.5 text-[11px] font-bold uppercase tracking-[0.18em] text-accent-foreground">
+          {{ $t("home.inventory_eyebrow") }}
+        </p>
+        <h1 id="home-introduction" class="text-3xl font-bold leading-tight tracking-tight">
+          {{ $t("home.introduction_title") }}
+        </h1>
+        <p class="mt-2 text-sm text-muted-foreground">{{ $t("home.introduction_description") }}</p>
+      </section>
+
+      <section aria-labelledby="home-statistics">
+        <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
+          <h2 id="home-statistics" class="text-base font-bold">{{ $t("home.quick_statistics") }}</h2>
+          <p v-if="selectedCollection" class="break-words text-xs text-muted-foreground">
+            {{ $t("home.collection_context", { name: selectedCollection.name }) }}
+          </p>
+        </div>
+        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <StatisticCard
+            v-for="stat in stats"
+            :key="stat.id"
+            :kind="stat.id"
+            :title="stat.label"
+            :value="stat.value"
+            :type="stat.type"
+            :description="stat.description"
+            :loading="statisticsLoading"
+            :failed="statisticsFailed"
+          />
+        </div>
+        <div v-if="statisticsFailed" role="alert" class="mt-3 flex flex-wrap items-center gap-3 text-sm">
+          <p>{{ $t("home.statistics_error") }}</p>
+          <Button variant="outline" size="sm" @click="refreshStatistics()">{{ $t("home.statistics_retry") }}</Button>
         </div>
       </section>
 
