@@ -106,19 +106,18 @@ func New(repos *repo.AllRepos, opts ...OptionsFunc) *AllServices {
 		opt(options)
 	}
 
+	entities := &EntityService{repo: repos, autoIncrementAssetID: options.autoIncrementAssetID}
 	return &AllServices{
-		User:  &UserService{repos: repos, mailer: options.mailer},
-		Group: &GroupService{repos},
-		Entities: &EntityService{
-			repo:                 repos,
-			autoIncrementAssetID: options.autoIncrementAssetID,
-		},
+		User:     &UserService{repos: repos, mailer: options.mailer},
+		Group:    &GroupService{repos},
+		Entities: entities,
 		BackgroundService: &BackgroundService{
 			repos:          repos,
 			latest:         Latest{},
 			notifierConfig: options.notifierConfig,
 		},
 		Exports: &ExportService{
+			entities:   entities,
 			db:         options.db,
 			repos:      repos,
 			bus:        options.bus,

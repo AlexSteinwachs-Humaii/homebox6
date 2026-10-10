@@ -31,7 +31,7 @@ func inventoryExportContext(r *http.Request) (services.Context, error) {
 // HandleInventoryExportsCreate godoc
 //
 // @Summary Create a pending inventory CSV job
-// @Description Persists a job for the selected collection. CSV worker publication is added separately; this never invokes the ZIP worker.
+// @Description Queues a full inventory CSV for the selected collection; preparation runs in a separate background worker.
 // @Tags Reporting
 // @Produce json
 // @Success 202 {object} repo.ExportOut
@@ -43,8 +43,7 @@ func (ctrl *V1Controller) HandleInventoryExportsCreate() errchain.HandlerFunc {
 		if err != nil {
 			return repo.ExportOut{}, err
 		}
-		// Story 2 replaces persistence-only creation with the CSV enqueue service.
-		return ctrl.repo.Exports.CreateInventoryCSV(ctx, ctx.GID)
+		return ctrl.svc.Exports.EnqueueInventoryCSV(ctx, ctx.GID, GetHBURL(r, &ctrl.config.Options, ctrl.url))
 	}, http.StatusAccepted)
 }
 

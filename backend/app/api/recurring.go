@@ -83,6 +83,22 @@ func registerRecurringTasks(app *app, cfg *config.Config, runner *graceful.Runne
 		})
 	})
 
+	runner.AddFunc("inventory-csv-subscription", func(ctx context.Context) error {
+		return runJobSubscription(ctx, cfg, "inventory_csv", func(ctx context.Context, msg *pubsub.Message) {
+			gid, err := uuid.Parse(msg.Metadata["group_id"])
+			if err != nil {
+				log.Err(err).Msg("CSV job: bad group_id")
+				return
+			}
+			id, err := uuid.Parse(msg.Metadata["export_id"])
+			if err != nil {
+				log.Err(err).Msg("CSV job: bad export_id")
+				return
+			}
+			app.services.Exports.RunInventoryCSV(ctx, id, gid, msg.Metadata["hb_url"])
+		})
+	})
+
 	runner.AddFunc("collection-import-subscription", func(ctx context.Context) error {
 		return runJobSubscription(ctx, cfg, "collection_import", func(ctx context.Context, msg *pubsub.Message) {
 			gid, err := uuid.Parse(msg.Metadata["group_id"])

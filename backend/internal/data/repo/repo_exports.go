@@ -84,6 +84,21 @@ func (r *ExportRepository) CreateInventoryCSV(ctx context.Context, gid uuid.UUID
 	return mapExport(e), nil
 }
 
+// ClaimInventoryCSV is a compare-and-swap: only one delivery may own a job.
+func (r *ExportRepository) ClaimInventoryCSV(ctx context.Context, gid, id uuid.UUID) (bool, error) {
+	n, err := r.db.Export.Update().Where(export.ID(id), export.GroupID(gid),
+		export.KindEQ(export.KindInventoryCsv), export.StatusEQ(export.StatusPending)).
+		SetStatus(export.StatusRunning).SetProgress(0).Save(ctx)
+	return n == 1, err
+}
+
+// RetainFailedCSVArtifact keeps a cleanup pointer if compensating blob deletion
+// fails. The artifact is never downloadable because the job remains failed.
+func (r *ExportRepository) RetainFailedCSVArtifact(ctx context.Context, gid, id uuid.UUID, key string) error {
+	return r.db.Export.UpdateOneID(id).Where(export.GroupID(gid), export.KindEQ(export.KindInventoryCsv)).
+		SetArtifactPath(key).Exec(ctx)
+}
+
 // ListByGroup is the legacy backup/restore listing; CSV reports are not ZIPs.
 func (r *ExportRepository) ListByGroup(ctx context.Context, gid uuid.UUID) ([]ExportOut, error) {
 	return r.listByKinds(ctx, gid, export.KindExport, export.KindImport)
@@ -211,7 +226,8 @@ func (r *ExportRepository) Delete(ctx context.Context, gid uuid.UUID, id uuid.UU
 // group on purpose: this is the cleanup task that sweeps every tenant.
 func (r *ExportRepository) ListOlderThan(ctx context.Context, cutoff time.Time) ([]ExportOut, error) {
 	rows, err := r.db.Export.Query().
-		Where(export.CreatedAtLT(cutoff)).
+		Where(export.CreatedAtLT(cutoff), export.Not(export.And(
+			export.KindEQ(export.KindInventoryCsv), export.StatusIn(export.StatusPending, export.StatusRunning)))).
 		All(ctx)
 	if err != nil {
 		return nil, err

@@ -2,7 +2,12 @@ package repo
 
 import (
 	"context"
+	"sync"
+	"sync/atomic"
 	"testing"
+	"time"
+
+	"github.com/sysadminsmedia/homebox/backend/internal/data/ent/export"
 
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
@@ -70,4 +75,67 @@ func TestInventoryCSVJobs(t *testing.T) {
 	rows, err = tRepos.Exports.ListInventoryCSV(ctx, other.ID)
 	require.NoError(t, err)
 	require.Empty(t, rows)
+}
+
+func TestInventoryCSVClaimAndRetention(t *testing.T) {
+	ctx := context.Background()
+	old := time.Now().Add(-8 * 24 * time.Hour)
+	csv, err := tClient.Export.Create().SetGroupID(tGroup.ID).SetKind(export.KindInventoryCsv).SetCreatedAt(old).Save(ctx)
+	require.NoError(t, err)
+	defer tRepos.Exports.Delete(ctx, tGroup.ID, csv.ID)
+	backup, err := tClient.Export.Create().SetGroupID(tGroup.ID).SetCreatedAt(old).Save(ctx)
+	require.NoError(t, err)
+	defer tRepos.Exports.Delete(ctx, tGroup.ID, backup.ID)
+	claimed, err := tRepos.Exports.ClaimInventoryCSV(ctx, uuid.New(), csv.ID)
+	require.NoError(t, err)
+	require.False(t, claimed)
+	claimed, err = tRepos.Exports.ClaimInventoryCSV(ctx, tGroup.ID, backup.ID)
+	require.NoError(t, err)
+	require.False(t, claimed)
+	stale, err := tRepos.Exports.ListOlderThan(ctx, time.Now().Add(-7*24*time.Hour))
+	require.NoError(t, err)
+	for _, row := range stale {
+		require.NotEqual(t, csv.ID, row.ID)
+	}
+	var winners atomic.Int32
+	var wg sync.WaitGroup
+	errs := make(chan error, 16)
+	for i := 0; i < 16; i++ {
+		wg.Go(func() {
+			won, err := tRepos.Exports.ClaimInventoryCSV(ctx, tGroup.ID, csv.ID)
+			if won {
+				winners.Add(1)
+			}
+			errs <- err
+		})
+	}
+	wg.Wait()
+	close(errs)
+	for err := range errs {
+		require.NoError(t, err)
+	}
+	require.EqualValues(t, 1, winners.Load())
+	row, err := tRepos.Exports.GetInventoryCSV(ctx, tGroup.ID, csv.ID)
+	require.NoError(t, err)
+	require.Equal(t, "running", row.Status)
+	stale, err = tRepos.Exports.ListOlderThan(ctx, time.Now().Add(-7*24*time.Hour))
+	require.NoError(t, err)
+	for _, row := range stale {
+		require.NotEqual(t, csv.ID, row.ID)
+	}
+	// Terminal CSV jobs join the existing seven-day sweep just like ZIPs.
+	for _, status := range []export.Status{export.StatusFailed, export.StatusCompleted} {
+		require.NoError(t, tClient.Export.UpdateOneID(csv.ID).SetStatus(status).Exec(ctx))
+		stale, err = tRepos.Exports.ListOlderThan(ctx, time.Now().Add(-7*24*time.Hour))
+		require.NoError(t, err)
+		ids := make([]uuid.UUID, len(stale))
+		for i, row := range stale {
+			ids[i] = row.ID
+		}
+		require.Contains(t, ids, csv.ID)
+		require.Contains(t, ids, backup.ID)
+		claimed, err := tRepos.Exports.ClaimInventoryCSV(ctx, tGroup.ID, csv.ID)
+		require.NoError(t, err)
+		require.False(t, claimed)
+	}
 }

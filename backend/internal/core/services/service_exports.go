@@ -199,6 +199,7 @@ type Manifest struct {
 // Every public method takes the requesting tenant's group id and refuses to
 // operate on data that does not belong to that group.
 type ExportService struct {
+	entities   *EntityService
 	db         *ent.Client
 	repos      *repo.AllRepos
 	bus        *eventbus.EventBus
@@ -346,6 +347,10 @@ func (s *ExportService) RunExport(ctx context.Context, exportID, gid uuid.UUID) 
 	exp, err := s.repos.Exports.Get(ctx, gid, exportID)
 	if err != nil {
 		log.Err(err).Stringer("export_id", exportID).Stringer("gid", gid).Msg("export job: row not found or wrong group")
+		return
+	}
+	if exp.Kind != "export" {
+		log.Warn().Stringer("export_id", exportID).Str("kind", exp.Kind).Msg("export job: not a ZIP export, skipping")
 		return
 	}
 	if exp.Status != "pending" {

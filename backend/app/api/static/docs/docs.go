@@ -2269,7 +2269,7 @@ const docTemplate = `{
                         "Bearer": []
                     }
                 ],
-                "description": "Persists a job for the selected collection. CSV worker publication is added separately; this never invokes the ZIP worker.",
+                "description": "Queues a full inventory CSV for the selected collection; preparation runs in a separate background worker.",
                 "produces": [
                     "application/json"
                 ],

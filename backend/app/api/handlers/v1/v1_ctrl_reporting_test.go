@@ -33,7 +33,9 @@ func TestInventoryExportHandlers(t *testing.T) {
 	other, err := repos.Groups.GroupCreate(ctx, "other", uuid.Nil)
 	require.NoError(t, err)
 	user := &repo.UserOut{ID: uuid.New(), DefaultGroupID: group.ID, GroupIDs: []uuid.UUID{group.ID, other.ID}}
-	ctrl := &V1Controller{repo: repos}
+	svc := services.New(repos, services.WithExportPlumbing(eventbus.New(), db, config.Storage{}, "mem://{{ .Topic }}-"+uuid.NewString(), "sqlite3"))
+	t.Cleanup(func() { _ = svc.Exports.Shutdown(context.Background()) })
+	ctrl := &V1Controller{repo: repos, svc: svc, config: &config.Config{}}
 	authenticated := services.SetTenantCtx(services.SetUserCtx(ctx, user, "token"), group.ID)
 	call := func(handler errchain.HandlerFunc, c context.Context, id uuid.UUID) (*httptest.ResponseRecorder, error) {
 		req := httptest.NewRequest(http.MethodGet, "/", nil).WithContext(c)
