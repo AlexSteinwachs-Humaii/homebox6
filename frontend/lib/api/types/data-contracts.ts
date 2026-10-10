@@ -47,6 +47,7 @@ export enum ExportKind {
   DefaultKind = "export",
   KindExport = "export",
   KindImport = "import",
+  KindInventoryCsv = "inventory_csv",
 }
 
 export enum EntityfieldType {
@@ -1053,9 +1054,8 @@ export interface ExportOut {
   groupId: string;
   id: string;
   /**
-   * Kind is "export" for server-produced backup artifacts, "import" for
-   * user-uploaded restore zips. The lifecycle fields below behave the
-   * same for both.
+   * Kind is export for ZIP backups, import for restores, and inventory_csv
+   * for inventory reports. All kinds share the lifecycle fields below.
    */
   kind: string;
   progress: number;

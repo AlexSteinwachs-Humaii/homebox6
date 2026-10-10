@@ -76,7 +76,7 @@ func (ctrl *V1Controller) HandleExportsCreate() errchain.HandlerFunc {
 func (ctrl *V1Controller) HandleExportGet() errchain.HandlerFunc {
 	fn := func(r *http.Request, id uuid.UUID) (repo.ExportOut, error) {
 		ctx := services.NewContext(r.Context())
-		return ctrl.repo.Exports.Get(ctx, ctx.GID, id)
+		return ctrl.repo.Exports.GetBackup(ctx, ctx.GID, id)
 	}
 
 	return adapters.CommandID("id", fn, http.StatusOK)
@@ -98,7 +98,7 @@ func (ctrl *V1Controller) HandleExportDownload() errchain.HandlerFunc {
 		if err != nil {
 			return err
 		}
-		out, err := ctrl.repo.Exports.Get(ctx, ctx.GID, id)
+		out, err := ctrl.repo.Exports.GetBackup(ctx, ctx.GID, id)
 		if err != nil {
 			if ent.IsNotFound(err) {
 				return validate.NewRequestError(err, http.StatusNotFound)
@@ -158,7 +158,7 @@ func (ctrl *V1Controller) HandleExportDownload() errchain.HandlerFunc {
 func (ctrl *V1Controller) HandleExportDelete() errchain.HandlerFunc {
 	fn := func(r *http.Request, id uuid.UUID) (any, error) {
 		ctx := services.NewContext(r.Context())
-		out, err := ctrl.repo.Exports.Get(ctx, ctx.GID, id)
+		out, err := ctrl.repo.Exports.GetBackup(ctx, ctx.GID, id)
 		if err != nil {
 			// Idempotent: a missing row is already in the desired state.
 			// Swallow here so the adapter writes 204 instead of letting the

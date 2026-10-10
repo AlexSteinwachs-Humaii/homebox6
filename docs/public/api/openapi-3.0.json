@@ -2416,6 +2416,91 @@
                 }
             }
         },
+        "/v1/reporting/inventory-exports": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "tags": [
+                    "Reporting"
+                ],
+                "summary": "List inventory CSV jobs for the selected collection",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/v1.Results-repo_ExportOut"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "Persists a job for the selected collection. CSV worker publication is added separately; this never invokes the ZIP worker.",
+                "tags": [
+                    "Reporting"
+                ],
+                "summary": "Create a pending inventory CSV job",
+                "responses": {
+                    "202": {
+                        "description": "Accepted",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/repo.ExportOut"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/reporting/inventory-exports/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "tags": [
+                    "Reporting"
+                ],
+                "summary": "Get an inventory CSV job in the selected collection",
+                "parameters": [
+                    {
+                        "description": "Inventory CSV job ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/repo.ExportOut"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/v1/status": {
             "get": {
                 "tags": [
@@ -4877,12 +4962,14 @@
                 "enum": [
                     "export",
                     "export",
-                    "import"
+                    "import",
+                    "inventory_csv"
                 ],
                 "x-enum-varnames": [
                     "DefaultKind",
                     "KindExport",
-                    "KindImport"
+                    "KindImport",
+                    "KindInventoryCsv"
                 ]
             },
             "export.Status": {
@@ -5872,7 +5959,7 @@
                         "type": "string"
                     },
                     "kind": {
-                        "description": "Kind is \"export\" for server-produced backup artifacts, \"import\" for\nuser-uploaded restore zips. The lifecycle fields below behave the\nsame for both.",
+                        "description": "Kind is export for ZIP backups, import for restores, and inventory_csv\nfor inventory reports. All kinds share the lifecycle fields below.",
                         "type": "string"
                     },
                     "progress": {

@@ -20,9 +20,8 @@ type ExportRepository struct {
 type ExportOut struct {
 	ID      uuid.UUID `json:"id"`
 	GroupID uuid.UUID `json:"groupId"`
-	// Kind is "export" for server-produced backup artifacts, "import" for
-	// user-uploaded restore zips. The lifecycle fields below behave the
-	// same for both.
+	// Kind is export for ZIP backups, import for restores, and inventory_csv
+	// for inventory reports. All kinds share the lifecycle fields below.
 	Kind         string    `json:"kind"`
 	CreatedAt    time.Time `json:"createdAt"`
 	UpdatedAt    time.Time `json:"updatedAt"`
@@ -75,9 +74,28 @@ func (r *ExportRepository) CreateImport(ctx context.Context, gid uuid.UUID, uplo
 	return mapExport(e), nil
 }
 
+// CreateInventoryCSV persists a pending inventory job. Publication and artifact
+// generation are separate from persistence and must never use the ZIP worker.
+func (r *ExportRepository) CreateInventoryCSV(ctx context.Context, gid uuid.UUID) (ExportOut, error) {
+	e, err := r.db.Export.Create().SetGroupID(gid).SetKind(export.KindInventoryCsv).Save(ctx)
+	if err != nil {
+		return ExportOut{}, err
+	}
+	return mapExport(e), nil
+}
+
+// ListByGroup is the legacy backup/restore listing; CSV reports are not ZIPs.
 func (r *ExportRepository) ListByGroup(ctx context.Context, gid uuid.UUID) ([]ExportOut, error) {
+	return r.listByKinds(ctx, gid, export.KindExport, export.KindImport)
+}
+
+func (r *ExportRepository) ListInventoryCSV(ctx context.Context, gid uuid.UUID) ([]ExportOut, error) {
+	return r.listByKinds(ctx, gid, export.KindInventoryCsv)
+}
+
+func (r *ExportRepository) listByKinds(ctx context.Context, gid uuid.UUID, kinds ...export.Kind) ([]ExportOut, error) {
 	rows, err := r.db.Export.Query().
-		Where(export.GroupID(gid)).
+		Where(export.GroupID(gid), export.KindIn(kinds...)).
 		Order(ent.Desc(export.FieldCreatedAt)).
 		All(ctx)
 	if err != nil {
@@ -95,6 +113,24 @@ func (r *ExportRepository) Get(ctx context.Context, gid uuid.UUID, id uuid.UUID)
 	e, err := r.db.Export.Query().
 		Where(export.ID(id), export.GroupID(gid)).
 		Only(ctx)
+	if err != nil {
+		return ExportOut{}, err
+	}
+	return mapExport(e), nil
+}
+
+// GetInventoryCSV rejects both other collections and non-CSV jobs.
+func (r *ExportRepository) GetInventoryCSV(ctx context.Context, gid, id uuid.UUID) (ExportOut, error) {
+	e, err := r.db.Export.Query().Where(export.ID(id), export.GroupID(gid), export.KindEQ(export.KindInventoryCsv)).Only(ctx)
+	if err != nil {
+		return ExportOut{}, err
+	}
+	return mapExport(e), nil
+}
+
+// GetBackup rejects CSV jobs on legacy ZIP routes while retaining import status.
+func (r *ExportRepository) GetBackup(ctx context.Context, gid, id uuid.UUID) (ExportOut, error) {
+	e, err := r.db.Export.Query().Where(export.ID(id), export.GroupID(gid), export.KindIn(export.KindExport, export.KindImport)).Only(ctx)
 	if err != nil {
 		return ExportOut{}, err
 	}

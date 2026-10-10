@@ -333,7 +333,7 @@ var (
 		{Name: "id", Type: field.TypeUUID},
 		{Name: "created_at", Type: field.TypeTime},
 		{Name: "updated_at", Type: field.TypeTime},
-		{Name: "kind", Type: field.TypeEnum, Enums: []string{"export", "import"}, Default: "export"},
+		{Name: "kind", Type: field.TypeEnum, Enums: []string{"export", "import", "inventory_csv"}, Default: "export"},
 		{Name: "status", Type: field.TypeEnum, Enums: []string{"pending", "running", "completed", "failed"}, Default: "pending"},
 		{Name: "progress", Type: field.TypeInt, Default: 0},
 		{Name: "artifact_path", Type: field.TypeString, Nullable: true},

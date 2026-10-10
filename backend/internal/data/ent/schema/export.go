@@ -9,8 +9,8 @@ import (
 )
 
 // Export holds the schema definition for the Export entity. An Export row
-// tracks a collection-archive job: its lifecycle status and, on completion,
-// the blob storage key for the produced zip artifact.
+// tracks a backup, restore, or inventory CSV job: its lifecycle status and,
+// on completion, the blob storage key for the artifact.
 type Export struct {
 	ent.Schema
 }
@@ -27,23 +27,18 @@ func (Export) Mixin() []ent.Mixin {
 
 func (Export) Fields() []ent.Field {
 	return []ent.Field{
-		// kind distinguishes server-produced export artifacts from
-		// user-uploaded import zips. The whole row lifecycle (status,
-		// progress, error) applies identically to both flavors — only the
-		// terminal action differs ("download" vs "restore"). Keeping them
-		// in one table avoids duplicating the entire job-tracking schema.
+		// kind separates ZIP backups, uploaded restore ZIPs, and inventory
+		// CSV reports. They share persistence, not workers or download formats.
 		field.Enum("kind").
-			Values("export", "import").
+			Values("export", "import", "inventory_csv").
 			Default("export"),
 		field.Enum("status").
 			Values("pending", "running", "completed", "failed").
 			Default("pending"),
 		field.Int("progress").
 			Default(0),
-		// artifact_path is the blob key this row points at: for kind=export
-		// it's the server-produced zip; for kind=import it's the upload
-		// staged at "{gid}/imports/{uuid}.zip" before the worker restores
-		// it.
+		// artifact_path is the blob key: backups and CSV reports live under
+		// {gid}/exports/; restore uploads under {gid}/imports/.
 		field.String("artifact_path").
 			Optional(),
 		field.Int64("size_bytes").
