@@ -14,6 +14,10 @@
       type: String as () => sizes,
       default: "md",
     },
+    home: {
+      type: Boolean,
+      default: false,
+    },
     hideIcon: {
       type: Boolean,
       default: false,
@@ -31,8 +35,10 @@
 
 <template>
   <NuxtLink
-    class="group/tag-chip flex gap-2 rounded-full border shadow transition duration-300 hover:bg-accent/50"
+    class="group/tag-chip flex gap-2 border transition duration-300 hover:bg-accent/50"
     :class="{
+      'max-w-full rounded-md shadow-none': home,
+      'rounded-full shadow': !home,
       'p-4 py-1 text-base': size === 'lg',
       'p-3 py-1 text-sm': size !== 'sm' && size !== 'lg',
       'p-2 py-0.5 text-xs': size === 'sm',
@@ -45,9 +51,10 @@
         : { backgroundColor: 'hsl(var(--accent))' }
     "
     :to="`/tag/${tag.id}`"
+    :title="home && tag.description ? tag.description : undefined"
   >
     <template v-if="!hideIcon">
-      <div class="relative">
+      <div class="relative" :class="{ 'shrink-0': home }">
         <component :is="chipIcon" class="invisible" /><!-- hack to ensure the size is correct -->
 
         <div
@@ -58,6 +65,6 @@
         </div>
       </div>
     </template>
-    {{ tag.name }}
+    <span :class="{ 'min-w-0 break-words': home }">{{ tag.name }}</span>
   </NuxtLink>
 </template>

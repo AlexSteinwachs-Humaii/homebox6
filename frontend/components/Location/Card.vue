@@ -1,6 +1,13 @@
 <template>
   <Card>
-    <NuxtLink :to="`/location/${location.id}`" class="group/location-card transition duration-300">
+    <NuxtLink v-if="home" :to="`/location/${location.id}`" class="block h-full rounded-lg p-3 hover:bg-accent/30">
+      <MdiMapMarkerOutline class="mb-2 size-5 text-muted-foreground" aria-hidden="true" />
+      <h3 class="break-words text-sm font-semibold">{{ location.name }}</h3>
+      <p class="mt-1 text-xs text-muted-foreground">
+        {{ homeCount === null ? $t("home.not_available") : $t("home.location_records", { count: homeCount }) }}
+      </p>
+    </NuxtLink>
+    <NuxtLink v-else :to="`/location/${location.id}`" class="group/location-card transition duration-300">
       <div
         :class="{
           'p-4': !dense,
@@ -34,11 +41,16 @@
   import MdiMapMarkerOutline from "~icons/mdi/map-marker-outline";
   import { Card } from "@/components/ui/card";
   import { Badge } from "@/components/ui/badge";
+  import { locationItemCount } from "~/lib/home-inventory";
 
   const props = defineProps({
     location: {
       type: Object as () => EntitySummary | EntityOut,
       required: true,
+    },
+    home: {
+      type: Boolean,
+      default: false,
     },
     dense: {
       type: Boolean,
@@ -46,9 +58,8 @@
     },
   });
 
-  const hasCount = computed(() => {
-    return !!(props.location as EntitySummary).itemCount;
-  });
+  const homeCount = computed(() => locationItemCount(props.location as EntitySummary));
+  const hasCount = computed(() => homeCount.value !== null);
 
   const count = computed(() => {
     return hasCount.value ? (props.location as EntitySummary).itemCount : undefined;

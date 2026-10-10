@@ -1,29 +1,39 @@
 import type { UserClient } from "~~/lib/api/user";
+import { readRecentItems } from "~/lib/home-inventory";
 
 export function itemsTable(api: UserClient) {
-  const { data: items, refresh } = useAsyncData(
-    "items",
+  const preferences = useViewPreferences();
+  const {
+    data: items,
+    refresh,
+    status,
+    error,
+  } = useAsyncData(
+    `home:recent:${preferences.value.collectionId ?? "default"}`,
     async () => {
-      const { data } = await api.items.getAll({
+      const response = await api.items.getAll({
         page: 1,
         pageSize: 5,
         orderBy: "createdAt",
       });
-      return data.items;
+      return readRecentItems(response);
     },
     {
       deep: true,
+      lazy: true,
     }
   );
 
   onServerEvent(ServerEvent.EntityMutation, () => {
-    console.log("entity mutation");
     refresh();
   });
 
   return computed(() => {
     return {
       items: items.value || [],
+      loading: status.value === "pending" || status.value === "idle",
+      failed: !!error.value,
+      refresh,
     };
   });
 }

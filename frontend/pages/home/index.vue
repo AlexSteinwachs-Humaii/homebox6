@@ -5,14 +5,12 @@
   import { useTagStore } from "~/stores/tags";
   import { useLocationStore } from "~~/stores/locations";
   import BaseContainer from "@/components/Base/Container.vue";
-  import BaseCard from "@/components/Base/Card.vue";
-  import Subtitle from "~/components/global/Subtitle.vue";
+  import Panel from "~/components/Home/Panel.vue";
+  import RecentItems from "~/components/Home/RecentItems.vue";
   import StatisticCard from "~/components/Home/StatisticCard.vue";
   import { Button } from "~/components/ui/button";
-  import ItemCard from "~/components/Item/Card.vue";
   import LocationCard from "~/components/Location/Card.vue";
   import TagChip from "~/components/Tag/Chip.vue";
-  import Table from "~/components/Item/View/Table.vue";
 
   const { t } = useI18n();
 
@@ -24,7 +22,6 @@
   });
 
   const api = useUserApi();
-  const breakpoints = useBreakpoints();
 
   const locationStore = useLocationStore();
   const locations = computed(() => locationStore.parentLocations);
@@ -54,12 +51,16 @@
         <h1 id="home-introduction" class="text-3xl font-bold leading-tight tracking-tight">
           {{ $t("home.introduction_title") }}
         </h1>
-        <p class="mt-2 text-sm text-muted-foreground">{{ $t("home.introduction_description") }}</p>
+        <p class="mt-2 text-sm text-muted-foreground">
+          {{ $t("home.introduction_description") }}
+        </p>
       </section>
 
       <section aria-labelledby="home-statistics">
         <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
-          <h2 id="home-statistics" class="text-base font-bold">{{ $t("home.quick_statistics") }}</h2>
+          <h2 id="home-statistics" class="text-base font-bold">
+            {{ $t("home.quick_statistics") }}
+          </h2>
           <p v-if="selectedCollection" class="break-words text-xs text-muted-foreground">
             {{ $t("home.collection_context", { name: selectedCollection.name }) }}
           </p>
@@ -83,33 +84,93 @@
         </div>
       </section>
 
-      <section>
-        <Subtitle> {{ $t("home.recently_added") }} </Subtitle>
-
-        <p v-if="itemTable.items.length === 0" class="ml-2 text-sm">{{ $t("items.no_results") }}</p>
-        <BaseCard v-else-if="breakpoints.lg">
-          <Table :items="itemTable.items" />
-        </BaseCard>
-        <div v-else class="grid grid-cols-1 gap-4 md:grid-cols-2">
-          <ItemCard v-for="item in itemTable.items" :key="item.id" :item="item" />
+      <Panel
+        :title="$t('home.recently_added')"
+        :description="$t('home.recent_description')"
+        :action="$t('home.search_inventory')"
+        to="/items"
+        :aria-busy="itemTable.loading"
+      >
+        <p v-if="itemTable.loading" role="status" class="p-5 text-sm text-muted-foreground">
+          {{ $t("global.loading") }}
+        </p>
+        <div v-else-if="itemTable.failed" role="alert" class="flex flex-wrap items-center gap-3 p-5 text-sm">
+          <p>{{ $t("home.recent_error") }}</p>
+          <Button variant="outline" size="sm" @click="itemTable.refresh()">{{ $t("home.retry") }}</Button>
         </div>
-      </section>
+        <p v-else-if="itemTable.items.length === 0" class="p-5 text-sm text-muted-foreground">
+          {{ $t("items.no_results") }}
+        </p>
+        <RecentItems v-else :items="itemTable.items" />
+      </Panel>
 
-      <section>
-        <Subtitle> {{ $t("home.storage_locations") }} </Subtitle>
-        <p v-if="locations.length === 0" class="ml-2 text-sm">{{ $t("locations.no_results") }}</p>
-        <div v-else class="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3">
-          <LocationCard v-for="location in locations" :key="location.id" :location="location" />
-        </div>
-      </section>
+      <div class="grid grid-cols-1 gap-5 lg:grid-cols-5">
+        <Panel
+          :title="$t('home.storage_locations')"
+          :action="$t('home.view_all')"
+          to="/locations"
+          class="lg:col-span-3"
+          :aria-busy="locationStore.parentsStatus === 'pending' || locationStore.parentsStatus === 'idle'"
+        >
+          <div class="p-4">
+            <p
+              v-if="locationStore.parentsStatus === 'pending' || locationStore.parentsStatus === 'idle'"
+              role="status"
+              class="text-sm text-muted-foreground"
+            >
+              {{ $t("global.loading") }}
+            </p>
+            <div
+              v-else-if="locationStore.parentsStatus === 'error'"
+              role="alert"
+              class="flex flex-wrap items-center gap-3 text-sm"
+            >
+              <p>{{ $t("home.locations_error") }}</p>
+              <Button variant="outline" size="sm" @click="locationStore.refreshParents()">{{
+                $t("home.retry")
+              }}</Button>
+            </div>
+            <p v-else-if="locations.length === 0" class="text-sm text-muted-foreground">
+              {{ $t("locations.no_results") }}
+            </p>
+            <div v-else class="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+              <LocationCard v-for="location in locations" :key="location.id" :location="location" home />
+            </div>
+          </div>
+        </Panel>
 
-      <section>
-        <Subtitle> {{ $t("home.tags") }} </Subtitle>
-        <p v-if="tags.length === 0" class="ml-2 text-sm">{{ $t("tags.no_results") }}</p>
-        <div v-else class="flex flex-wrap gap-4">
-          <TagChip v-for="tag in tags" :key="tag.id" size="lg" :tag="tag" class="shadow-md" />
-        </div>
-      </section>
+        <Panel
+          :title="$t('home.tags')"
+          :action="$t('home.manage')"
+          to="/tags"
+          class="lg:col-span-2"
+          :aria-busy="tagsStore.status === 'pending' || tagsStore.status === 'idle'"
+        >
+          <div class="p-5">
+            <p
+              v-if="tagsStore.status === 'pending' || tagsStore.status === 'idle'"
+              role="status"
+              class="text-sm text-muted-foreground"
+            >
+              {{ $t("global.loading") }}
+            </p>
+            <div
+              v-else-if="tagsStore.status === 'error'"
+              role="alert"
+              class="flex flex-wrap items-center gap-3 text-sm"
+            >
+              <p>{{ $t("home.tags_error") }}</p>
+              <Button variant="outline" size="sm" @click="tagsStore.refresh()">{{ $t("home.retry") }}</Button>
+            </div>
+            <p v-else-if="tags.length === 0" class="text-sm text-muted-foreground">
+              {{ $t("tags.no_results") }}
+            </p>
+            <div v-else class="flex flex-wrap gap-2">
+              <TagChip v-for="tag in tags" :key="tag.id" size="sm" :tag="tag" home />
+            </div>
+          </div>
+        </Panel>
+      </div>
     </BaseContainer>
   </div>
 </template>

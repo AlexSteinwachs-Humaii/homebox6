@@ -4,6 +4,7 @@ import type { TagOut, TagSummary } from "~~/lib/api/types/data-contracts";
 export const useTagStore = defineStore("tags", {
   state: () => ({
     allTags: null as TagOut[] | null,
+    status: "idle" as "idle" | "pending" | "success" | "error",
     client: useUserApi(),
     refreshAllTagsPromise: null as Promise<void> | null,
   }),
@@ -29,13 +30,21 @@ export const useTagStore = defineStore("tags", {
       await this.refreshAllTagsPromise;
     },
     async refresh() {
-      const result = await this.client.tags.getAll();
-      if (result.error) {
-        return result;
-      }
+      this.status = "pending";
+      try {
+        const result = await this.client.tags.getAll();
+        if (result.error || !Array.isArray(result.data)) {
+          this.status = "error";
+          return result;
+        }
 
-      this.allTags = result.data;
-      return result;
+        this.allTags = result.data;
+        this.status = "success";
+        return result;
+      } catch (error) {
+        this.status = "error";
+        throw error;
+      }
     },
     getAncestors(tags: string[]) {
       if (this.allTags === null) {
@@ -67,7 +76,10 @@ export const useTagStore = defineStore("tags", {
       if (!tags) {
         return [];
       }
-      const ancestors = this.getAncestors(tags.map(t => t.id)).map(t => ({ ...t, ancestors: true }));
+      const ancestors = this.getAncestors(tags.map(t => t.id)).map(t => ({
+        ...t,
+        ancestors: true,
+      }));
 
       return [...tags.map(t => ({ ...t, ancestors: false })), ...ancestors].sort((a, b) =>
         a.name.localeCompare(b.name)
