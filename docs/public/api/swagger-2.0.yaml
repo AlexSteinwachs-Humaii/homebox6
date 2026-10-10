@@ -1209,11 +1209,8 @@ definitions:
       location:
         allOf:
         - $ref: '#/definitions/repo.EntitySummary'
-        description: |-
-          Location is the nearest ancestor whose entity type is a location.
-          When the direct parent is already a location it equals Parent; when
-          the entity is nested inside other items it is the location those
-          items ultimately live in. Nil for top-level entities.
+        description: Location is the nearest containing location, populated on request
+          for lists.
         x-nullable: true
         x-omitempty: true
       manufacturer:
@@ -1337,6 +1334,13 @@ definitions:
       itemCount:
         description: Container-specific (populated when querying locations)
         type: number
+      location:
+        allOf:
+        - $ref: '#/definitions/repo.EntitySummary'
+        description: Location is the nearest containing location, populated on request
+          for lists.
+        x-nullable: true
+        x-omitempty: true
       name:
         type: string
       parent:
@@ -2532,6 +2536,14 @@ paths:
           type: string
         name: parentIds
         type: array
+      - description: Include nearest containing location
+        in: query
+        name: includeLocation
+        type: boolean
+      - description: Match descendants of parentIds
+        in: query
+        name: includeDescendants
+        type: boolean
       produces:
       - application/json
       responses:

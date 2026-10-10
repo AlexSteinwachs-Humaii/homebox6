@@ -175,6 +175,16 @@ paths:
             type: array
             items:
               type: string
+        - description: Include nearest containing location
+          name: includeLocation
+          in: query
+          schema:
+            type: boolean
+        - description: Match descendants of parentIds
+          name: includeDescendants
+          in: query
+          schema:
+            type: boolean
       responses:
         "200":
           description: OK
@@ -3323,11 +3333,8 @@ components:
           description: Warranty
           type: boolean
         location:
-          description: |-
-            Location is the nearest ancestor whose entity type is a location.
-            When the direct parent is already a location it equals Parent; when
-            the entity is nested inside other items it is the location those
-            items ultimately live in. Nil for top-level entities.
+          description: Location is the nearest containing location, populated on request
+            for lists.
           allOf:
             - $ref: "#/components/schemas/repo.EntitySummary"
           x-omitempty: true
@@ -3453,6 +3460,13 @@ components:
         itemCount:
           description: Container-specific (populated when querying locations)
           type: number
+        location:
+          description: Location is the nearest containing location, populated on request
+            for lists.
+          allOf:
+            - $ref: "#/components/schemas/repo.EntitySummary"
+          x-omitempty: true
+          nullable: true
         name:
           type: string
         parent:

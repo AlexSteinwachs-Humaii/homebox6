@@ -18,6 +18,9 @@ import type { MaintenanceFilters } from "./maintenance.ts";
 import type { Requests } from "~~/lib/requests";
 
 export type ItemsQuery = {
+  includeLocation?: boolean;
+  includeDescendants?: boolean;
+  isLocation?: boolean;
   orderBy?: string;
   includeArchived?: boolean;
   page?: number;

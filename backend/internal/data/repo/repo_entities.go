@@ -53,22 +53,24 @@ type (
 	}
 
 	EntityQuery struct {
-		IsLocation       *bool        `json:"isLocation"` // nil=all, true=locations only, false=items only
-		Search           string       `json:"search"`
-		SortBy           string       `json:"sortBy"`
-		OrderBy          string       `json:"orderBy"`
-		ParentIDs        []uuid.UUID  `json:"parentIds"`
-		TagIDs           []uuid.UUID  `json:"tagIds"`
-		ParentItemIDs    []uuid.UUID  `json:"parentItemIds"`
-		Fields           []FieldQuery `json:"fields"`
-		Page             int
-		PageSize         int
-		AssetID          AssetID `json:"assetId"`
-		NegateTags       bool    `json:"negateTags"`
-		OnlyWithoutPhoto bool    `json:"onlyWithoutPhoto"`
-		OnlyWithPhoto    bool    `json:"onlyWithPhoto"`
-		IncludeArchived  bool    `json:"includeArchived"`
-		FilterChildren   bool    `json:"filterChildren"` // when true, only return root entities (no parent)
+		IncludeLocation    bool         `json:"includeLocation"`
+		IncludeDescendants bool         `json:"includeDescendants"`
+		IsLocation         *bool        `json:"isLocation"` // nil=all, true=locations only, false=items only
+		Search             string       `json:"search"`
+		SortBy             string       `json:"sortBy"`
+		OrderBy            string       `json:"orderBy"`
+		ParentIDs          []uuid.UUID  `json:"parentIds"`
+		TagIDs             []uuid.UUID  `json:"tagIds"`
+		ParentItemIDs      []uuid.UUID  `json:"parentItemIds"`
+		Fields             []FieldQuery `json:"fields"`
+		Page               int
+		PageSize           int
+		AssetID            AssetID `json:"assetId"`
+		NegateTags         bool    `json:"negateTags"`
+		OnlyWithoutPhoto   bool    `json:"onlyWithoutPhoto"`
+		OnlyWithPhoto      bool    `json:"onlyWithPhoto"`
+		IncludeArchived    bool    `json:"includeArchived"`
+		FilterChildren     bool    `json:"filterChildren"` // when true, only return root entities (no parent)
 	}
 
 	DuplicateOptions struct {
@@ -162,6 +164,9 @@ type (
 		UpdatedAt   time.Time `json:"updatedAt"`
 
 		PurchasePrice float64 `json:"purchasePrice"`
+
+		// Location is the nearest containing location, populated on request for lists.
+		Location *EntitySummary `json:"location,omitempty" extensions:"x-nullable,x-omitempty"`
 
 		// Edges
 		Parent     *EntitySummary     `json:"parent,omitempty"     extensions:"x-nullable,x-omitempty"`
@@ -702,7 +707,13 @@ func (r *EntityRepository) QueryByGroup(ctx context.Context, gid uuid.UUID, q En
 			)
 		}
 
-		if len(q.ParentIDs) > 0 {
+		if len(q.ParentIDs) > 0 && q.IncludeDescendants {
+			ids, err := r.descendantIDs(ctx, gid, q.ParentIDs)
+			if err != nil {
+				return PaginationResult[EntitySummary]{}, err
+			}
+			andPredicates = append(andPredicates, entity.IDIn(ids...))
+		} else if len(q.ParentIDs) > 0 {
 			parentPredicates := lo.Map(q.ParentIDs, func(l uuid.UUID, _ int) predicate.Entity {
 				return entity.HasParentWith(entity.ID(l))
 			})
@@ -782,6 +793,12 @@ func (r *EntityRepository) QueryByGroup(ctx context.Context, gid uuid.UUID, q En
 	}
 	fetchSpan.SetAttributes(attribute.Int("query.results.count", len(entities)))
 	fetchSpan.End()
+
+	if q.IncludeLocation {
+		if err := r.populateLocations(ctx, gid, entities); err != nil {
+			return PaginationResult[EntitySummary]{}, err
+		}
+	}
 
 	// Populate ItemCount for location-type entities
 	if q.IsLocation != nil && *q.IsLocation && len(entities) > 0 {
@@ -2916,4 +2933,86 @@ func ConvertEntitiesToTree(items []FlatTreeItem) []TreeItem {
 	return lo.Map(rootIds, func(id uuid.UUID, _ int) TreeItem {
 		return *itemMap[id]
 	})
+}
+
+// descendantIDs traverses only the selected collection. UNION also guards cycles.
+func (r *EntityRepository) descendantIDs(ctx context.Context, gid uuid.UUID, roots []uuid.UUID) ([]uuid.UUID, error) {
+	var ids []uuid.UUID
+	for _, root := range roots {
+		rows, err := r.db.Sql().QueryContext(ctx, `WITH RECURSIVE descendants(id) AS (
+            SELECT id FROM entities WHERE id = $1 AND group_entities = $2
+            UNION SELECT e.id FROM entities e JOIN descendants d ON e.entity_children = d.id WHERE e.group_entities = $2
+        ) SELECT id FROM descendants WHERE id != $1`, root, gid)
+		if err != nil {
+			return nil, err
+		}
+		for rows.Next() {
+			var id uuid.UUID
+			if err := rows.Scan(&id); err != nil {
+				rows.Close()
+				return nil, err
+			}
+			ids = append(ids, id)
+		}
+		err = rows.Err()
+		rows.Close()
+		if err != nil {
+			return nil, err
+		}
+	}
+	return ids, nil
+}
+
+// populateLocations batches ancestor reads for a page, not a query per row.
+// Group predicates, visited IDs and the existing depth bound protect scope/cycles.
+func (r *EntityRepository) populateLocations(ctx context.Context, gid uuid.UUID, items []EntitySummary) error {
+	ancestors := map[uuid.UUID]*ent.Entity{}
+	pending := []uuid.UUID{}
+	seen := map[uuid.UUID]bool{}
+	for _, item := range items {
+		if item.Parent != nil {
+			pending = append(pending, item.Parent.ID)
+		}
+	}
+	for depth := 0; len(pending) > 0 && depth < maxAncestorDepth; depth++ {
+		ids := []uuid.UUID{}
+		for _, id := range pending {
+			if !seen[id] {
+				seen[id] = true
+				ids = append(ids, id)
+			}
+		}
+		if len(ids) == 0 {
+			break
+		}
+		rows, err := r.db.Entity.Query().Where(entity.IDIn(ids...), entity.HasGroupWith(group.ID(gid))).WithParent().WithEntityType().All(ctx)
+		if err != nil {
+			return err
+		}
+		pending = nil
+		for _, row := range rows {
+			ancestors[row.ID] = row
+			if row.Edges.Parent != nil && (row.Edges.EntityType == nil || !row.Edges.EntityType.IsLocation) {
+				pending = append(pending, row.Edges.Parent.ID)
+			}
+		}
+	}
+	for i := range items {
+		if items[i].Parent == nil {
+			continue
+		}
+		cur := ancestors[items[i].Parent.ID]
+		for depth := 0; cur != nil && depth < maxAncestorDepth; depth++ {
+			if cur.Edges.EntityType != nil && cur.Edges.EntityType.IsLocation {
+				loc := mapEntitySummary(cur)
+				items[i].Location = &loc
+				break
+			}
+			if cur.Edges.Parent == nil {
+				break
+			}
+			cur = ancestors[cur.Edges.Parent.ID]
+		}
+	}
+	return nil
 }

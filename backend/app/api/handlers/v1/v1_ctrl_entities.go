@@ -53,6 +53,8 @@ func startEntityCtrlSpan(ctx context.Context, name string, attrs ...attribute.Ke
 //	@Param		pageSize	query		int			false	"items per page"
 //	@Param		tags		query		[]string	false	"tags Ids"		collectionFormat(multi)
 //	@Param		parentIds	query		[]string	false	"parent Ids"	collectionFormat(multi)
+//	@Param includeLocation query bool false "Include nearest containing location"
+//	@Param includeDescendants query bool false "Match descendants of parentIds"
 //	@Success	200			{object}	repo.EntityListResult
 //	@Router		/v1/entities [GET]
 //	@Security	Bearer
@@ -74,17 +76,19 @@ func (ctrl *V1Controller) HandleEntitiesGetAll() errchain.HandlerFunc {
 		}
 
 		v := repo.EntityQuery{
-			Page:             queryIntOrNegativeOne(params.Get("page")),
-			PageSize:         queryIntOrNegativeOne(params.Get("pageSize")),
-			Search:           params.Get("q"),
-			ParentIDs:        queryUUIDList(params, "parentIds"),
-			TagIDs:           queryUUIDList(params, "tags"),
-			NegateTags:       queryBool(params.Get("negateTags")),
-			OnlyWithoutPhoto: queryBool(params.Get("onlyWithoutPhoto")),
-			OnlyWithPhoto:    queryBool(params.Get("onlyWithPhoto")),
-			IncludeArchived:  queryBool(params.Get("includeArchived")),
-			Fields:           filterFieldItems(params["fields"]),
-			OrderBy:          params.Get("orderBy"),
+			IncludeLocation:    queryBool(params.Get("includeLocation")),
+			IncludeDescendants: queryBool(params.Get("includeDescendants")),
+			Page:               queryIntOrNegativeOne(params.Get("page")),
+			PageSize:           queryIntOrNegativeOne(params.Get("pageSize")),
+			Search:             params.Get("q"),
+			ParentIDs:          queryUUIDList(params, "parentIds"),
+			TagIDs:             queryUUIDList(params, "tags"),
+			NegateTags:         queryBool(params.Get("negateTags")),
+			OnlyWithoutPhoto:   queryBool(params.Get("onlyWithoutPhoto")),
+			OnlyWithPhoto:      queryBool(params.Get("onlyWithPhoto")),
+			IncludeArchived:    queryBool(params.Get("includeArchived")),
+			Fields:             filterFieldItems(params["fields"]),
+			OrderBy:            params.Get("orderBy"),
 		}
 
 		// Parse isLocation filter: "true" = locations only, "false" = items only, absent = default (items only)

@@ -407,6 +407,13 @@
     },
     {
       icon: MdiFileTree,
+      id: 12,
+      active: computed(() => route.path === "/reports"),
+      name: computed(() => t("menu.reports")),
+      to: "/reports",
+    },
+    {
+      icon: MdiFileTree,
       id: 1,
       active: computed(() => route.path === "/locations"),
       name: computed(() => t("menu.locations")),

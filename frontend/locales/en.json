@@ -777,7 +777,8 @@
         "profile": "Profile",
         "scanner": "Scanner",
         "search": "Search",
-        "templates": "Templates"
+        "templates": "Templates",
+        "reports": "Reports"
     },
     "pages": {
         "templates": {
@@ -902,6 +903,35 @@
             "toast": {
                 "page_too_small_card": "Page size is too small for the card size"
             }
+        },
+        "overview": {
+            "title": "Inventory overview",
+            "intro": "Review your collection inventory.",
+            "export": "Export all data (CSV)",
+            "export_scope": "Includes all inventory data you can access in this collection, including the full CSV schema and custom fields. Search, location filters and pagination do not apply.",
+            "export_pending": "Background export controls are coming in the next update.",
+            "loading_totals": "Loading collection totals…",
+            "summary_error": "Could not load collection totals or locations. Please retry.",
+            "retry": "Retry",
+            "data": "Report data",
+            "filter_scope": "Filters change only this dashboard view. Totals remain collection-wide.",
+            "search": "Search inventory",
+            "location": "Location",
+            "all_locations": "All locations",
+            "clear": "Clear filters",
+            "loading": "Loading inventory…",
+            "error": "Could not load inventory. Please retry.",
+            "no_match": "No inventory matches these filters. Try another search or clear filters.",
+            "empty": "This collection has no inventory items.",
+            "name": "Name",
+            "asset_id": "Asset ID",
+            "quantity": "Quantity",
+            "no_location": "No location",
+            "range": "Showing {start}–{end} of {total} items",
+            "pagination": "Inventory pagination",
+            "page": "Page {page} of {pages}",
+            "previous": "Previous",
+            "next": "Next"
         }
     },
     "scanner": {

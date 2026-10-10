@@ -800,12 +800,7 @@ export interface EntityOut {
   itemCount: number;
   /** Warranty */
   lifetimeWarranty: boolean;
-  /**
-   * Location is the nearest ancestor whose entity type is a location.
-   * When the direct parent is already a location it equals Parent; when
-   * the entity is nested inside other items it is the location those
-   * items ultimately live in. Nil for top-level entities.
-   */
+  /** Location is the nearest containing location, populated on request for lists. */
   location?: EntitySummary | null;
   manufacturer: string;
   modelNumber: string;
@@ -860,6 +855,8 @@ export interface EntitySummary {
   insured: boolean;
   /** Container-specific (populated when querying locations) */
   itemCount: number;
+  /** Location is the nearest containing location, populated on request for lists. */
+  location?: EntitySummary | null;
   name: string;
   /** Edges */
   parent?: EntitySummary | null;

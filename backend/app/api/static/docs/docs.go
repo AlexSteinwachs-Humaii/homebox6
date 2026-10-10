@@ -282,6 +282,18 @@ const docTemplate = `{
                         "description": "parent Ids",
                         "name": "parentIds",
                         "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "Include nearest containing location",
+                        "name": "includeLocation",
+                        "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "Match descendants of parentIds",
+                        "name": "includeDescendants",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -5020,7 +5032,7 @@ const docTemplate = `{
                     "type": "boolean"
                 },
                 "location": {
-                    "description": "Location is the nearest ancestor whose entity type is a location.\nWhen the direct parent is already a location it equals Parent; when\nthe entity is nested inside other items it is the location those\nitems ultimately live in. Nil for top-level entities.",
+                    "description": "Location is the nearest containing location, populated on request for lists.",
                     "allOf": [
                         {
                             "$ref": "#/definitions/repo.EntitySummary"
@@ -5204,6 +5216,16 @@ const docTemplate = `{
                 "itemCount": {
                     "description": "Container-specific (populated when querying locations)",
                     "type": "number"
+                },
+                "location": {
+                    "description": "Location is the nearest containing location, populated on request for lists.",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/repo.EntitySummary"
+                        }
+                    ],
+                    "x-nullable": true,
+                    "x-omitempty": true
                 },
                 "name": {
                     "type": "string"
