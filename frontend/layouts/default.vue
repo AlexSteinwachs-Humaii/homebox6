@@ -18,15 +18,12 @@
     <CollectionInviteCreateModal />
     <SidebarProvider :default-open="sidebarState">
       <Sidebar collapsible="icon">
-        <SidebarHeader class="items-center">
-          <SidebarGroupLabel class="text-base group-data-[collapsible=icon]:hidden">{{
-            $t("global.welcome", { username: username })
-          }}</SidebarGroupLabel>
-          <NuxtLink class="max-w-full" to="/home">
+        <SidebarHeader class="workspace-sidebar-header">
+          <NuxtLink class="max-w-full py-3" to="/home">
             <AppWorkspaceBrand />
           </NuxtLink>
 
-          <CollectionSelector />
+          <CollectionSelector workspace />
 
           <DropdownMenu>
             <DropdownMenuTrigger as-child>
@@ -34,6 +31,7 @@
                 class="flex justify-center bg-primary text-primary-foreground drop-shadow-md hover:bg-primary/90 active:bg-primary/90 active:text-primary-foreground group-data-[collapsible=icon]:justify-start"
                 :tooltip="$t('global.create')"
                 hotkey="Shortcut: Ctrl+`"
+                :aria-label="$t('global.create')"
               >
                 <MdiPlus />
                 <span>
@@ -51,10 +49,14 @@
                     if (btn.dialogId === DialogID.CreateEntity) {
                       if (btn.id == 0)
                         // create item
-                        openDialog(btn.dialogId, { params: { baseType: 'item' } });
+                        openDialog(btn.dialogId, {
+                          params: { baseType: 'item' },
+                        });
                       else if (btn.id == 1)
                         // create location
-                        openDialog(btn.dialogId, { params: { baseType: 'location' } });
+                        openDialog(btn.dialogId, {
+                          params: { baseType: 'location' },
+                        });
                     } else {
                       openDialog(btn.dialogId as NoParamDialogIDs);
                     }
@@ -73,9 +75,10 @@
         </SidebarHeader>
 
         <SidebarContent>
-          <SidebarGroup>
+          <SidebarGroup v-for="group in navigationGroups" :key="group.label" class="workspace-navigation-group">
+            <SidebarGroupLabel class="workspace-navigation-label">{{ group.label }}</SidebarGroupLabel>
             <SidebarMenu>
-              <template v-for="n in nav" :key="n.id">
+              <template v-for="n in group.items" :key="n.id">
                 <SidebarMenuItem v-if="!n.collapsible" :key="n.id">
                   <SidebarMenuLink
                     :href="n.to"
@@ -84,6 +87,8 @@
                       'text-nowrap': typeof locale === 'string' && locale.startsWith('zh-'),
                     }"
                     :tooltip="n.name.value"
+                    :aria-label="n.name.value"
+                    :aria-current="n.active.value ? 'page' : undefined"
                   >
                     <component :is="n.icon" />
                     <span>{{ n.name.value }}</span>
@@ -100,12 +105,17 @@
                           'text-nowrap': typeof locale === 'string' && locale.startsWith('zh-'),
                         }"
                         :tooltip="n.name.value"
+                        :aria-label="n.name.value"
+                        :aria-current="n.active.value ? 'page' : undefined"
                       >
                         <component :is="n.icon" />
                         <span>{{ n.name.value }}</span>
                       </SidebarMenuLink>
                       <CollapsibleTrigger as-child>
-                        <SidebarMenuButton class="flex size-12 items-center justify-center">
+                        <SidebarMenuButton
+                          class="flex size-8 items-center justify-center"
+                          :aria-label="$t('workspace.toggle_collection_navigation')"
+                        >
                           <MdiChevronRight
                             class="transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90"
                           />
@@ -123,6 +133,8 @@
                               'h-min py-0': true,
                             }"
                             :tooltip="c.name.value"
+                            :aria-label="c.name.value"
+                            :aria-current="c.active.value ? 'page' : undefined"
                           >
                             <span>{{ c.name.value }}</span>
                           </SidebarMenuLink>
@@ -134,13 +146,14 @@
               </template>
 
               <!-- makes scanner accessible easily if using legacy header -->
-              <SidebarMenuItem v-if="preferences.displayLegacyHeader">
+              <SidebarMenuItem v-if="preferences.displayLegacyHeader && group.id === 'workspace'">
                 <SidebarMenuButton
                   :class="{
                     'text-nowrap': typeof locale === 'string' && locale.startsWith('zh-'),
                   }"
                   :tooltip="$t('menu.scanner')"
-                  @click.prevent="openDialog(DialogID.Scanner)"
+                  :aria-label="$t('menu.scanner')"
+                  @click.prevent="openScanner"
                 >
                   <MdiQrcodeScan />
                   <span>{{ $t("menu.scanner") }}</span>
@@ -150,11 +163,16 @@
           </SidebarGroup>
         </SidebarContent>
 
-        <SidebarFooter>
+        <SidebarFooter class="workspace-account-footer">
+          <SidebarMenuLink href="/profile" :tooltip="username" :aria-label="$t('menu.profile')">
+            <span class="workspace-avatar" aria-hidden="true">{{ initials }}</span>
+            <span class="min-w-0 truncate">{{ username }}</span>
+          </SidebarMenuLink>
           <SidebarMenuButton
             class="flex justify-center group-data-[collapsible=icon]:justify-start group-data-[collapsible=icon]:bg-destructive group-data-[collapsible=icon]:text-destructive-foreground group-data-[collapsible=icon]:shadow-sm group-data-[collapsible=icon]:hover:bg-destructive/90"
             :tooltip="$t('global.sign_out')"
             data-testid="logout-button"
+            :aria-label="$t('global.sign_out')"
             @click="logout"
           >
             <MdiLogout />
@@ -170,20 +188,28 @@
         <div class="relative flex h-full flex-col justify-center">
           <div v-if="preferences.displayLegacyHeader">
             <AppHeaderDecor class="-mt-10 hidden lg:block" />
-            <SidebarTrigger class="absolute left-2 top-2 hidden lg:flex" variant="default" />
+            <SidebarTrigger
+              class="absolute left-2 top-2 hidden lg:flex"
+              variant="default"
+              :aria-label="$t('workspace.toggle_navigation')"
+            />
           </div>
           <!-- IMPORTANT: if you change the height of this div, alter the top value in the item edit page-->
           <div
-            class="sticky top-0 z-20 flex h-[var(--header-height-mobile)] translate-y-[-0.5px] flex-col bg-secondary p-2 shadow-md sm:h-[var(--header-height)] sm:flex-row"
+            class="sticky top-0 z-20 flex h-[var(--header-height-mobile)] translate-y-[-0.5px] flex-col border-b bg-background px-4 py-2 sm:h-[var(--header-height)] sm:flex-row"
             :class="{
               'lg:hidden': preferences.displayLegacyHeader,
             }"
           >
             <div class="flex h-1/2 items-center gap-2 sm:h-auto">
-              <SidebarTrigger variant="default" />
-              <NuxtLink to="/home">
-                <span class="text-sm font-semibold">One World Direct</span>
-              </NuxtLink>
+              <SidebarTrigger
+                variant="ghost"
+                class="workspace-sidebar-trigger"
+                :aria-label="$t('workspace.toggle_navigation')"
+              />
+              <span class="hidden text-sm text-muted-foreground md:inline">{{ $t("workspace.navigation") }}</span>
+              <span class="hidden text-muted-foreground md:inline" aria-hidden="true">/</span>
+              <span class="max-w-40 truncate text-sm font-semibold">{{ currentPage }}</span>
             </div>
             <div class="sm:grow" />
             <div class="flex h-1/2 grow items-center justify-end gap-2 sm:h-auto">
@@ -191,19 +217,33 @@
                 v-model:model-value="search"
                 class="h-9 grow sm:max-w-sm"
                 :placeholder="$t('global.search')"
+                :aria-label="$t('global.search')"
                 type="search"
                 @keyup.enter="triggerSearch"
               />
               <div>
-                <Button size="icon" @click="triggerSearch">
+                <Button
+                  variant="outline"
+                  size="icon"
+                  :aria-label="$t('workspace.submit_search')"
+                  @click="triggerSearch"
+                >
                   <MdiMagnify />
                 </Button>
               </div>
               <div>
-                <Button size="icon" @click="openScanner">
+                <Button variant="outline" size="icon" :aria-label="$t('menu.scanner')" @click="openScanner">
                   <MdiQrcodeScan />
                 </Button>
               </div>
+              <NuxtLink
+                to="/profile"
+                class="workspace-avatar shrink-0"
+                :aria-label="$t('menu.profile')"
+                :title="username"
+              >
+                <span aria-hidden="true">{{ initials }}</span>
+              </NuxtLink>
             </div>
           </div>
 
@@ -233,6 +273,7 @@
 </template>
 
 <script lang="ts" setup>
+  import { accountInitials } from "~/lib/workspace/account";
   import { useI18n } from "vue-i18n";
   import { provideWorkspaceSurface } from "~/composables/useWorkspaceSurface";
   import DOMPurify from "dompurify";
@@ -302,7 +343,8 @@
   provideWorkspaceSurface();
 
   const { t, locale } = useI18n();
-  const username = computed(() => authCtx.user?.name || "User");
+  const username = computed(() => authCtx.user?.name?.trim() || t("menu.profile"));
+  const initials = computed(() => accountInitials(authCtx.user?.name));
 
   const { openDialog } = useDialog();
 
@@ -339,7 +381,9 @@
     if (navigator.mediaDevices) {
       navigator.mediaDevices
         .getUserMedia({ video: true })
-        .then(() => {
+        .then(stream => {
+          // Permission probe only; the scanner owns its camera stream.
+          stream.getTracks().forEach(track => track.stop());
           openDialog(DialogID.Scanner);
         })
         .catch(err => {
@@ -408,28 +452,28 @@
     {
       icon: MdiFileTree,
       id: 1,
-      active: computed(() => route.path === "/locations"),
+      active: computed(() => route.path === "/locations" || route.path.startsWith("/location/")),
       name: computed(() => t("menu.locations")),
       to: "/locations",
     },
     {
       icon: MdiTagMultiple,
       id: 2,
-      active: computed(() => route.path === "/tags"),
+      active: computed(() => route.path === "/tags" || route.path.startsWith("/tag/")),
       name: computed(() => t("global.tags")),
       to: "/tags",
     },
     {
       icon: MdiMagnify,
       id: 3,
-      active: computed(() => route.path === "/items"),
+      active: computed(() => route.path === "/items" || route.path.startsWith("/item/")),
       name: computed(() => t("menu.search")),
       to: "/items",
     },
     {
       icon: MdiFileDocumentMultiple,
       id: 4,
-      active: computed(() => route.path === "/templates"),
+      active: computed(() => route.path === "/templates" || route.path.startsWith("/template/")),
       name: computed(() => t("menu.templates")),
       to: "/templates",
     },
@@ -450,7 +494,7 @@
     {
       icon: MdiCog,
       id: 7,
-      active: computed(() => route.path.includes("/collection")),
+      active: computed(() => route.path === "/collection" || route.path.startsWith("/collection/")),
       name: computed(() => t("menu.collection")),
       to: "/collection/members",
       collapsible: [
@@ -493,6 +537,23 @@
       ],
     },
   ];
+
+  const navigationGroups = computed(() => [
+    {
+      id: "workspace",
+      label: t("workspace.navigation"),
+      items: nav.filter(n => !n.collapsible),
+    },
+    {
+      id: "administration",
+      label: t("workspace.administration"),
+      items: nav.filter(n => n.collapsible),
+    },
+  ]);
+  const currentPage = computed(() => {
+    const child = nav.flatMap(n => n.collapsible ?? []).find(n => n.active.value);
+    return child?.name.value ?? nav.find(n => n.active.value)?.name.value ?? t("workspace.brand_descriptor");
+  });
 
   const quickMenuActions = reactive([
     ...dropdown.map(v => ({

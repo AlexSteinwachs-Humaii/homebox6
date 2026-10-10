@@ -5,16 +5,17 @@
         variant="outline"
         role="combobox"
         :aria-expanded="open"
-        :size="sidebar.state.value === 'collapsed' ? 'icon' : undefined"
-        :class="sidebar.state.value === 'collapsed' ? 'size-10' : 'w-full justify-between drop-shadow-md'"
+        :size="collapsed ? 'icon' : undefined"
+        :class="[collapsed ? 'size-10' : 'w-full justify-between', { 'workspace-collection-selector': workspace }]"
         :aria-label="t('components.collection.selector.select_collection')"
         :title="t('components.collection.selector.select_collection')"
       >
-        <template v-if="sidebar.state.value === 'collapsed'">
+        <template v-if="collapsed">
           <MdiHomeGroup class="size-5" />
         </template>
         <template v-else>
-          <span class="flex items-center truncate">
+          <span class="flex min-w-0 flex-col items-start truncate">
+            <span v-if="workspace" class="text-[10px] uppercase opacity-75">{{ t("menu.collection") }}</span>
             <span class="truncate">
               {{
                 selectedCollection && selectedCollection.name
@@ -42,7 +43,8 @@
               }
             "
           >
-            <Plus class="mr-2 size-4" /> {{ t("components.collection.selector.create_collection") }}
+            <Plus class="mr-2 size-4" />
+            {{ t("components.collection.selector.create_collection") }}
           </CommandItem>
           <CommandItem
             value="join-collection"
@@ -53,7 +55,8 @@
               }
             "
           >
-            <UserPlus class="mr-2 size-4" /> {{ t("components.collection.selector.join_collection") }}
+            <UserPlus class="mr-2 size-4" />
+            {{ t("components.collection.selector.join_collection") }}
           </CommandItem>
           <CommandItem as-child value="collection-settings">
             <NuxtLink to="/collection/members" class="flex w-full items-center" @click="open = false">
@@ -105,6 +108,8 @@
   import { DialogID } from "@/components/ui/dialog-provider/utils";
   import { useDialog } from "~/components/ui/dialog-provider";
 
+  const { workspace } = defineProps<{ workspace?: boolean }>();
+
   const { openDialog } = useDialog();
 
   const { t } = useI18n();
@@ -124,6 +129,7 @@
   }
 
   const sidebar = useSidebar();
+  const collapsed = computed(() => sidebar.state.value === "collapsed" && !sidebar.isMobile.value);
 
   const filteredCollections = computed(() => {
     const filtered = fuzzysort.go(search.value, collectionsList.value, { key: "name", all: true }).map(i => i.obj);

@@ -1,5 +1,10 @@
 {
     "workspace": {
+        "navigation": "Workspace",
+        "administration": "Administration",
+        "toggle_navigation": "Toggle navigation",
+        "toggle_collection_navigation": "Toggle collection navigation",
+        "submit_search": "Search inventory",
         "brand_descriptor": "Inventory workspace"
     },
     "collection": {
